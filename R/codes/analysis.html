@@ -9,10 +9,10 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="Kazuki Aoyama" />
+<meta name="author" content="J2200002 青山和樹" />
 
 
-<title>Analysis report</title>
+<title>Tic-Tac-Toe Endgame データセットに対して複数のアルゴリズムを適用し、性能を比較、考察する</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -362,25 +362,33 @@ pre code {
 
 
 
-<h1 class="title toc-ignore">Analysis report</h1>
-<h3 class="subtitle">2023-12-22 07:17:44</h3>
-<h4 class="author">Kazuki Aoyama</h4>
+<h1 class="title toc-ignore">Tic-Tac-Toe Endgame
+データセットに対して複数のアルゴリズムを適用し、性能を比較、考察する</h1>
+<h3 class="subtitle">2023-12-24 16:56:00</h3>
+<h4 class="author">J2200002 青山和樹</h4>
 
 </div>
 
 
-<p>This report contains the analysis code and results for the following
-research article:</p>
-<blockquote>
-<p>………………..</p>
-</blockquote>
-<div id="materials-and-methods" class="section level1">
-<h1>Materials and Methods</h1>
-<div id="guidelines" class="section level2">
-<h2>Guidelines</h2>
-</div>
-<div id="data-analysis" class="section level2">
-<h2>Data analysis</h2>
+<div id="データセットと方法" class="section level1">
+<h1>データセットと方法</h1>
+<ul>
+<li>Tic-Tac-Toe Endgame <a href="https://archive.ics.uci.edu/dataset/101/tic+tac+toe+endgame">リンク</a></li>
+</ul>
+<hr />
+<ol style="list-style-type: decimal">
+<li>ランダムフォレスト</li>
+<li>サポートベクターマシン</li>
+<li>ロジスティック回帰</li>
+</ol>
+<p>以上の３つのアルゴリズムを利用する</p>
+<p>データセットは80％を訓練用にし、残り20％をテスト用に設定する</p>
+<p>また、訓練用データは5つのフォールド（部分データセット）に分割し、そのうち4つをトレーニングに使用し、残りの1つをテストに使用して、全体で5回の検証を行う。これにより、モデルの安定性や一般化性能を評価することを目指す。</p>
+<p>以上の手順を踏み、交差検証の結果とテストの正答率について考察する</p>
+<div id="データ解析" class="section level2">
+<h2>データ解析</h2>
+<div id="セットアップとデータの準備" class="section level3">
+<h3>セットアップとデータの準備</h3>
 <pre class="r"><code># set working directory
 setwd(&quot;~/project/codes&quot;)
 
@@ -390,83 +398,182 @@ options(na.action = &quot;na.pass&quot;)
 # save default graphics parameters
 oldpar &lt;- par(no.readonly = TRUE) 
 
-# attach the package &#39;checkpoint&#39;
+# load checkpoint
 library(checkpoint)</code></pre>
 <pre><code>## 
 ## checkpoint: Part of the Reproducible R Toolkit from Microsoft
 ## https://mran.microsoft.com/documents/rro/reproducibility/</code></pre>
-<pre class="r"><code># set checkpoint date
+<pre class="r"><code># チェックポイントのセット
 checkpoint(&quot;2023-12-1&quot;, checkpoint_location = &quot;../&quot;, scan_now = FALSE)</code></pre>
 <pre><code>## Using checkpoint directory /home/rstudio/project/.checkpoint/2023-12-1/lib/x86_64-pc-linux-gnu/4.2.0</code></pre>
-<pre class="r"><code># attach packages
-library(pacman)
-p_load(kableExtra, metafor, robvis)</code></pre>
-<pre><code>## Installing package into &#39;/home/rstudio/project/.checkpoint/2023-12-1/lib/x86_64-pc-linux-gnu/4.2.0&#39;
-## (as &#39;lib&#39; is unspecified)</code></pre>
-<pre><code>## Warning: unable to access index for repository https://mran.microsoft.com/snapshot/2023-12-1/src/contrib:
-##   cannot open URL &#39;https://mran.microsoft.com/snapshot/2023-12-1/src/contrib/PACKAGES&#39;</code></pre>
-<pre><code>## Warning: package &#39;kableExtra&#39; is not available for this version of R
-## 
-## A version of this package for your version of R might be available elsewhere,
-## see the ideas at
-## https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages</code></pre>
-<pre><code>## Warning: &#39;BiocManager&#39; not available.  Could not check Bioconductor.
-## 
-## Please use `install.packages(&#39;BiocManager&#39;)` and then retry.</code></pre>
-<pre><code>## Warning in p_install(package, character.only = TRUE, ...):</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;kableExtra&#39;</code></pre>
-<pre><code>## Installing package into &#39;/home/rstudio/project/.checkpoint/2023-12-1/lib/x86_64-pc-linux-gnu/4.2.0&#39;
-## (as &#39;lib&#39; is unspecified)</code></pre>
-<pre><code>## Warning: unable to access index for repository https://mran.microsoft.com/snapshot/2023-12-1/src/contrib:
-##   cannot open URL &#39;https://mran.microsoft.com/snapshot/2023-12-1/src/contrib/PACKAGES&#39;</code></pre>
-<pre><code>## Warning: package &#39;metafor&#39; is not available for this version of R
-## 
-## A version of this package for your version of R might be available elsewhere,
-## see the ideas at
-## https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages</code></pre>
-<pre><code>## Warning: &#39;BiocManager&#39; not available.  Could not check Bioconductor.
-## 
-## Please use `install.packages(&#39;BiocManager&#39;)` and then retry.</code></pre>
-<pre><code>## Warning in p_install(package, character.only = TRUE, ...):</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;metafor&#39;</code></pre>
-<pre><code>## Installing package into &#39;/home/rstudio/project/.checkpoint/2023-12-1/lib/x86_64-pc-linux-gnu/4.2.0&#39;
-## (as &#39;lib&#39; is unspecified)</code></pre>
-<pre><code>## Warning: unable to access index for repository https://mran.microsoft.com/snapshot/2023-12-1/src/contrib:
-##   cannot open URL &#39;https://mran.microsoft.com/snapshot/2023-12-1/src/contrib/PACKAGES&#39;</code></pre>
-<pre><code>## Warning: package &#39;robvis&#39; is not available for this version of R
-## 
-## A version of this package for your version of R might be available elsewhere,
-## see the ideas at
-## https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages</code></pre>
-<pre><code>## Warning: &#39;BiocManager&#39; not available.  Could not check Bioconductor.
-## 
-## Please use `install.packages(&#39;BiocManager&#39;)` and then retry.</code></pre>
-<pre><code>## Warning in p_install(package, character.only = TRUE, ...):</code></pre>
-<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
-## logical.return = TRUE, : there is no package called &#39;robvis&#39;</code></pre>
-<pre><code>## Warning in p_load(kableExtra, metafor, robvis): Failed to install/load:
-## kableExtra, metafor, robvis</code></pre>
-<pre class="r"><code># load data sets
-df_01 &lt;- read.csv(&quot;datasets/01_bcg.csv&quot;, na.strings = c(&quot;&quot;, &quot;NULL&quot;))
-
-#test
-binom.test(450, 1000, p=0.5)</code></pre>
+<pre class="r"><code># ライブラリの読み込み
+library(caret)</code></pre>
+<pre><code>## Loading required package: ggplot2</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+<pre class="r"><code>library(randomForest)</code></pre>
+<pre><code>## randomForest 4.7-1.1</code></pre>
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 <pre><code>## 
-##  Exact binomial test
+## Attaching package: &#39;randomForest&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
 ## 
-## data:  450 and 1000
-## number of successes = 450, number of trials = 1000, p-value = 0.001731
-## alternative hypothesis: true probability of success is not equal to 0.5
-## 95 percent confidence interval:
-##  0.4188517 0.4814435
-## sample estimates:
-## probability of success 
-##                   0.45</code></pre>
-<pre class="r"><code>rm(list = ls())
+##     margin</code></pre>
+<pre class="r"><code>library(kernlab)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;kernlab&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:ggplot2&#39;:
+## 
+##     alpha</code></pre>
+<pre class="r"><code>library(knitr)
+
+# データの読み込み
+tic_tac_toe_data &lt;- read.csv(&quot;./datasets/tic-tac-toe.data&quot;, header = FALSE, sep = &quot;,&quot;) 
+
+# 列名を設定
+colnames(tic_tac_toe_data) &lt;- c(&#39;top_left&#39;, &#39;top_middle&#39;, &#39;top_right&#39;, &#39;middle_left&#39;, &#39;middle_middle&#39;, &#39;middle_right&#39;, &#39;bottom_left&#39;, &#39;bottom_middle&#39;, &#39;bottom_right&#39;, &#39;class&#39;)
+
+# データの分割
+set.seed(123)
+sample_indices &lt;- sample(1:nrow(tic_tac_toe_data), 0.8 * nrow(tic_tac_toe_data))
+train_data &lt;- tic_tac_toe_data[sample_indices, ]
+test_data &lt;- tic_tac_toe_data[-sample_indices, ]
+levels(test_data$class) &lt;- levels(train_data$class)
+
+# 交差検証の設定
+ctrl &lt;- trainControl(method = &quot;cv&quot;, number = 5)</code></pre>
+</div>
+<div id="モデルのトレーニングと評価" class="section level3">
+<h3>モデルのトレーニングと評価</h3>
+<pre class="r"><code># ランダムフォレスト
+rf_model &lt;- train(class ~ ., data = train_data, method = &quot;rf&quot;, trControl = ctrl)
+rf_predictions &lt;- predict(rf_model, newdata = test_data)
+rf_accuracy &lt;- mean(rf_predictions == test_data$class)
+
+# サポートベクトルマシン
+svm_model &lt;- train(class ~ ., data = train_data, method = &quot;svmRadial&quot;, trControl = ctrl)
+svm_predictions &lt;- predict(svm_model, newdata = test_data)
+svm_accuracy &lt;- mean(svm_predictions == test_data$class)
+
+# ロジスティック回帰
+glm_model &lt;- train(class ~ ., data = train_data, method = &quot;glm&quot;, trControl = ctrl, family = binomial(link = &quot;logit&quot;))</code></pre>
+<pre><code>## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred</code></pre>
+<pre class="r"><code>glm_predictions &lt;- predict(glm_model, newdata = test_data)
+glm_accuracy &lt;- mean(glm_predictions == test_data$class)
+
+# 結果の出力
+cat(&quot;Random Forest CV Accuracy:&quot;, rf_model$results$Accuracy, &quot; Test Accuracy:&quot;, rf_accuracy, &quot;\n&quot;)</code></pre>
+<pre><code>## Random Forest CV Accuracy: 0.8969018 0.9843307 0.9856379  Test Accuracy: 0.9739583</code></pre>
+<pre class="r"><code>cat(&quot;SVM CV Accuracy:&quot;, svm_model$results$Accuracy, &quot; Test Accuracy:&quot;, svm_accuracy, &quot;\n&quot;)</code></pre>
+<pre><code>## SVM CV Accuracy: 0.7962991 0.8629064 0.9869451  Test Accuracy: 0.9739583</code></pre>
+<pre class="r"><code>cat(&quot;Logistic Regression CV Accuracy:&quot;, glm_model$results$Accuracy, &quot; Test Accuracy:&quot;, glm_accuracy, &quot;\n&quot;)</code></pre>
+<pre><code>## Logistic Regression CV Accuracy: 0.9830319  Test Accuracy: 0.9739583</code></pre>
+</div>
+</div>
+</div>
+<div id="結果" class="section level1">
+<h1>結果</h1>
+<pre class="r"><code># テーブルのデータフレームを作成
+results_data &lt;- data.frame(
+  Algorithm = c(&quot;Random Forest&quot;, &quot;SVM&quot;, &quot;Logistic Regression&quot;),
+  CV_Accuracy = c(rf_model$results$Accuracy[3], svm_model$results$Accuracy[3], glm_model$results$Accuracy),
+  Test_Accuracy = c(rf_accuracy, svm_accuracy, glm_accuracy)
+)
+
+# テーブルの表示
+kable(results_data, caption = &quot;各アルゴリズムの交差検証とテスト精度のまとめ&quot;, format = &quot;markdown&quot;)</code></pre>
+<table>
+<caption>各アルゴリズムの交差検証とテスト精度のまとめ</caption>
+<thead>
+<tr class="header">
+<th align="left">Algorithm</th>
+<th align="right">CV_Accuracy</th>
+<th align="right">Test_Accuracy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Random Forest</td>
+<td align="right">0.9856379</td>
+<td align="right">0.9739583</td>
+</tr>
+<tr class="even">
+<td align="left">SVM</td>
+<td align="right">0.9869451</td>
+<td align="right">0.9739583</td>
+</tr>
+<tr class="odd">
+<td align="left">Logistic Regression</td>
+<td align="right">0.9830319</td>
+<td align="right">0.9739583</td>
+</tr>
+</tbody>
+</table>
+<div id="終了とクリーンアップ" class="section level3">
+<h3>終了とクリーンアップ</h3>
+<pre class="r"><code># | label: terminate
+
+rm(list = ls())
 
 uncheckpoint()</code></pre>
+</div>
+<div id="ランダムフォレスト" class="section level2">
+<h2>ランダムフォレスト</h2>
+<p>交差検証結果</p>
+<p>CV Accuracy: 0.9856379</p>
+<p>テスト結果</p>
+<p>Test Accuracy: 0.9739583</p>
+<p>考察</p>
+<p>ランダムフォレストは、交差検証およびテストデータで高い精度を達成してい。
+CVとテストの精度に大きな差は見られない。</p>
+</div>
+<div id="サポートベクターマシン" class="section level2">
+<h2>サポートベクターマシン</h2>
+<p>交差検証結果</p>
+<p>CV Accuracy: 0.9869451</p>
+<p>テスト結果</p>
+<p>Test Accuracy: 0.9739583</p>
+<p>考察</p>
+<p>サポートベクターマシンも高い精度を達成していて、ランダムフォレストと同等の性能を示している。
+パラメータの調整により、CVとテストの精度がほぼ一致していることが分かる。</p>
+</div>
+<div id="ロジスティック回帰" class="section level2">
+<h2>ロジスティック回帰</h2>
+<p>交差検証結果</p>
+<p>CV Accuracy: 0.9830319</p>
+<p>テスト結果</p>
+<p>Test Accuracy: 0.9739583</p>
+<p>考察</p>
+<p>ロジスティック回帰も高い精度を達成していますが、SVMとランダムフォレストに比べてやや低い傾向が見られる。
+警告メッセージが表示されており、数値的な問題が発生している可能性がある。</p>
+</div>
+</div>
+<div id="結論" class="section level1">
+<h1>結論</h1>
+<ul>
+<li>3つのアルゴリズムともに高い精度を達成しており、Tic-Tac-Toe
+Endgameデータセットにおいては適切に機能していることが分かった。</li>
+<li>SVMとランダムフォレストは特に優れた性能を示しており、どちらもほぼ同等の結果を示してることが分かった。</li>
+<li>ロジスティック回帰はやや低いが、それでもかなり良好な精度を維持している。</li>
+<li>モデルの選択はタスクやデータに依存するが、このデータセットではランダムフォレストやSVMが適していることが分かった。</li>
+</ul>
+<div id="参考" class="section level2">
+<h2>参考</h2>
+<ul>
+<li><a href="https://archive.ics.uci.edu/dataset/101/tic+tac+toe+endgame">データセット</a></li>
+<li><a href="https://zenn.dev/nekometa/articles/220416_docker_checkpoint">解析環境</a></li>
+<li><a href="https://www.r-project.org/other-docs.html">R docs</a></li>
+<li><a href="https://qiita.com/Qiita/items/c686397e4a0f4f11683d#%E3%83%8E%E3%83%BC%E3%83%88%E8%A8%98%E6%B3%95%E5%86%85%E3%81%A7%E3%81%AEmarkdown%E8%A8%98%E6%B3%95%E3%81%AE%E4%BD%BF%E7%94%A8">マークダウン記法</a></li>
+</ul>
 </div>
 </div>
 

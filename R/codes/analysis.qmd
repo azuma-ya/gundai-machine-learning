@@ -1,7 +1,7 @@
 ---
-title: "Analysis report"
+title: "Tic-Tac-Toe Endgame データセットに対して複数のアルゴリズムを適用し、性能を比較、考察する"
 subtitle: " `r Sys.time() ` "
-author: "Kazuki Aoyama"
+author: "J2200002 青山和樹"
 format: 
   html: 
     toc: true
@@ -26,15 +26,27 @@ bibliography: "./templates/0000_r-project.bib"
 csl: "./templates/sage-vancouver.csl"
 ---
 
-This report contains the analysis code and results for the following research article:
+# データセットと方法
 
-> ....................
+* Tic-Tac-Toe Endgame [リンク](https://archive.ics.uci.edu/dataset/101/tic+tac+toe+endgame)
 
-# Materials and Methods
+---
 
-## Guidelines
+1. ランダムフォレスト
+2. サポートベクターマシン
+3. ロジスティック回帰
 
-## Data analysis
+以上の３つのアルゴリズムを利用する
+
+データセットは80％を訓練用にし、残り20％をテスト用に設定する
+
+また、訓練用データは5つのフォールド（部分データセット）に分割し、そのうち4つをトレーニングに使用し、残りの1つをテストに使用して、全体で5回の検証を行う。これにより、モデルの安定性や一般化性能を評価することを目指す。
+
+以上の手順を踏み、交差検証の結果とテストの正答率について考察する
+
+## データ解析
+
+### セットアップとデータの準備
 
 ```{r}
 #| label: setup
@@ -49,59 +61,141 @@ options(na.action = "na.pass")
 # save default graphics parameters
 oldpar <- par(no.readonly = TRUE) 
 
-# attach the package 'checkpoint'
+# load checkpoint
 library(checkpoint)
 
-# set checkpoint date
+# チェックポイントのセット
 checkpoint("2023-12-1", checkpoint_location = "../", scan_now = FALSE)
 
-# attach packages
 # ライブラリの読み込み
-library(pacman)
-
-# p_load(caret, randomForest)
-install.packages('caret', dependencies=TRUE)
-install.packages('randomForest')
 library(caret)
 library(randomForest)
+library(kernlab)
+library(knitr)
 
 # データの読み込み
-url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
-mushroom_data <- read.csv(url, header = FALSE)
-colnames(mushroom_data) <- c("class", "cap_shape", "cap_surface", "cap_color", "bruises", "odor", "gill_attachment",
-                             "gill_spacing", "gill_size", "gill_color", "stalk_shape", "stalk_root", "stalk_surface_above_ring",
-                             "stalk_surface_below_ring", "stalk_color_above_ring", "stalk_color_below_ring", "veil_type",
-                             "veil_color", "ring_number", "ring_type", "spore_print_color", "population", "habitat")
+tic_tac_toe_data <- read.csv("./datasets/tic-tac-toe.data", header = FALSE, sep = ",") 
+
+# 列名を設定
+colnames(tic_tac_toe_data) <- c('top_left', 'top_middle', 'top_right', 'middle_left', 'middle_middle', 'middle_right', 'bottom_left', 'bottom_middle', 'bottom_right', 'class')
 
 # データの分割
 set.seed(123)
-split_index <- createDataPartition(mushroom_data$class, p = 0.8, list = FALSE)
-train_data <- mushroom_data[split_index, ]
-test_data <- mushroom_data[-split_index, ]
+sample_indices <- sample(1:nrow(tic_tac_toe_data), 0.8 * nrow(tic_tac_toe_data))
+train_data <- tic_tac_toe_data[sample_indices, ]
+test_data <- tic_tac_toe_data[-sample_indices, ]
+levels(test_data$class) <- levels(train_data$class)
 
-# LOOCVを含む設定
-ctrl_loocv <- trainControl(method = "LOOCV")
+# 交差検証の設定
+ctrl <- trainControl(method = "cv", number = 5)
+```
 
-# ランダムフォレストモデルのトレーニング
-rf_model <- train(class ~ ., data = train_data, method = "rf", trControl = ctrl_loocv)
+### モデルのトレーニングと評価
+```{r}
+#| label: analysis
+#| code-fold: true
 
-# 交差検証の結果を表示
-print(rf_model)
+# ランダムフォレスト
+rf_model <- train(class ~ ., data = train_data, method = "rf", trControl = ctrl)
+rf_predictions <- predict(rf_model, newdata = test_data)
+rf_accuracy <- mean(rf_predictions == test_data$class)
 
-# テストセットを使用してモデルの性能を評価
-predictions <- predict(rf_model, test_data)
+# サポートベクトルマシン
+svm_model <- train(class ~ ., data = train_data, method = "svmRadial", trControl = ctrl)
+svm_predictions <- predict(svm_model, newdata = test_data)
+svm_accuracy <- mean(svm_predictions == test_data$class)
 
-# 混同行列の表示
-confusion_matrix <- confusionMatrix(predictions, test_data$class)
-print(confusion_matrix)
+# ロジスティック回帰
+glm_model <- train(class ~ ., data = train_data, method = "glm", trControl = ctrl, family = binomial(link = "logit"))
+glm_predictions <- predict(glm_model, newdata = test_data)
+glm_accuracy <- mean(glm_predictions == test_data$class)
+
+# 結果の出力
+cat("Random Forest CV Accuracy:", rf_model$results$Accuracy, " Test Accuracy:", rf_accuracy, "\n")
+cat("SVM CV Accuracy:", svm_model$results$Accuracy, " Test Accuracy:", svm_accuracy, "\n")
+cat("Logistic Regression CV Accuracy:", glm_model$results$Accuracy, " Test Accuracy:", glm_accuracy, "\n")
+```
+
+# 結果
+```{r}
+
+# テーブルのデータフレームを作成
+results_data <- data.frame(
+  Algorithm = c("Random Forest", "SVM", "Logistic Regression"),
+  CV_Accuracy = c(rf_model$results$Accuracy[3], svm_model$results$Accuracy[3], glm_model$results$Accuracy),
+  Test_Accuracy = c(rf_accuracy, svm_accuracy, glm_accuracy)
+)
+
+# テーブルの表示
+kable(results_data, caption = "各アルゴリズムの交差検証とテスト精度のまとめ", format = "markdown")
 
 ```
 
+### 終了とクリーンアップ
 ```{r}
-#| label: terminate
+# | label: terminate
 
 rm(list = ls())
 
 uncheckpoint()
 
 ```
+
+## ランダムフォレスト
+
+交差検証結果
+
+CV Accuracy: 0.9856379
+
+テスト結果
+
+Test Accuracy: 0.9739583
+
+考察
+
+ランダムフォレストは、交差検証およびテストデータで高い精度を達成してい。
+CVとテストの精度に大きな差は見られない。
+
+## サポートベクターマシン
+
+交差検証結果
+
+CV Accuracy: 0.9869451
+
+テスト結果
+
+Test Accuracy: 0.9739583
+
+考察
+
+サポートベクターマシンも高い精度を達成していて、ランダムフォレストと同等の性能を示している。
+パラメータの調整により、CVとテストの精度がほぼ一致していることが分かる。
+
+## ロジスティック回帰
+
+交差検証結果
+
+CV Accuracy: 0.9830319
+
+テスト結果
+
+Test Accuracy: 0.9739583
+
+考察
+
+ロジスティック回帰も高い精度を達成していますが、SVMとランダムフォレストに比べてやや低い傾向が見られる。
+警告メッセージが表示されており、数値的な問題が発生している可能性がある。
+
+# 結論
+
+* 3つのアルゴリズムともに高い精度を達成しており、Tic-Tac-Toe Endgameデータセットにおいては適切に機能していることが分かった。
+* SVMとランダムフォレストは特に優れた性能を示しており、どちらもほぼ同等の結果を示してることが分かった。
+* ロジスティック回帰はやや低いが、それでもかなり良好な精度を維持している。
+* モデルの選択はタスクやデータに依存するが、このデータセットではランダムフォレストやSVMが適していることが分かった。
+
+## 参考
+
+* [データセット](https://archive.ics.uci.edu/dataset/101/tic+tac+toe+endgame)
+* [解析環境](https://zenn.dev/nekometa/articles/220416_docker_checkpoint)
+* [R docs](https://www.r-project.org/other-docs.html)
+* [マークダウン記法](https://qiita.com/Qiita/items/c686397e4a0f4f11683d#%E3%83%8E%E3%83%BC%E3%83%88%E8%A8%98%E6%B3%95%E5%86%85%E3%81%A7%E3%81%AEmarkdown%E8%A8%98%E6%B3%95%E3%81%AE%E4%BD%BF%E7%94%A8)

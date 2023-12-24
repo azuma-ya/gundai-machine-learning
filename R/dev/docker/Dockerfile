@@ -16,6 +16,15 @@ RUN install2.r -e -s -n -1 \
      checkpoint \
      pacman \
      rmarkdown \
+     caret \
+     randomForest \
+     e1071 \
+     kernlab \
+     knitr \
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN install2.r -e -s -n -1 \
+     ggplot2 \
   && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 # Add github.com to known_hosts in SSH
