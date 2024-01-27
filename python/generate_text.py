@@ -40,9 +40,9 @@ for i, sentence in enumerate(sentences):
     y[i, char_indices[next_chars[i]]] = 1
 
 # モデルを読み込む
-model = model_from_json(open("./complete_model_epoch_60.json").read())
+model = model_from_json(open("./complete_model_epoch_100.json").read())
 # 学習結果を読み込む
-model.load_weights("./complete_model_epoch_60.h5")
+model.load_weights("./complete_model_epoch_100.h5")
 
 model.summary()
 
@@ -71,7 +71,7 @@ def evaluate_sentence(start_sentence):
         print('----- Generating with seed: "' + sentence + '"')
         sys.stdout.write(generated)
 
-        for i in range(3000):
+        for i in range(300):
             x_pred = np.zeros((1, maxlen, len(chars)))
             for t, char in enumerate(sentence):
                 x_pred[0, t, char_indices[char]] = 1.0
@@ -86,10 +86,7 @@ def evaluate_sentence(start_sentence):
     return generated
 
 
-output_file = open("akutagawa_output.txt", "w", encoding="utf-8").write(generated)
-
-
 for i in range(3):
-    created_sentence = evaluate_sentence("私は")
+    created_sentence = evaluate_sentence("拘置所にとじこめられている四十面相は、")
     print("--------------------" + str(i + 1) + "--------------------")
     print(created_sentence)
