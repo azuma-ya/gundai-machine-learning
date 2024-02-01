@@ -6,8 +6,8 @@ path = "./text/"
 
 files = os.listdir(path)
 
-for file in files:
-    file_path = path + file
+for file_name in files:
+    file_path = path + file_name
     # print(file_path)
     with open(file_path, "r", encoding="Shift_JIS") as file:
         source_text = file.read()
@@ -20,4 +20,6 @@ for file in files:
         text_without_com = re.sub(r"［.+?］", "", text_without_rubi)
         # 出版社や作成日などの情報を削除
         output = text_without_com.split("底本")[0]
-        output_file = open("preprocess_done.txt", "a", encoding="utf-8").write(output)
+        output_file = open(
+            f"./text_data/preprocess_done_{file_name}", "a", encoding="utf-8"
+        ).write(output)
