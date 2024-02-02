@@ -11,8 +11,18 @@ for file_name in files:
     model = word2vec.Word2Vec.load(file_path)
     print(file_path)
     try:
-        print("人生-愛")
-        for item, value in model.wv.most_similar(positive=["人生"], negative=["愛"]):
+        # print("人生-愛")
+        # for item, value in model.wv.most_similar(positive=["人生"], negative=["愛"]):
+        #     print(item, value)
+        # print("--------------")
+
+        print("人生")
+        for item, value in model.wv.most_similar(positive=["人生"]):
+            print(item, value)
+        print("--------------")
+
+        print("愛")
+        for item, value in model.wv.most_similar(positive=["愛"]):
             print(item, value)
         print("--------------")
     except:
